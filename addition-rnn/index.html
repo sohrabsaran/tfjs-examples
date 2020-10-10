@@ -21,6 +21,13 @@ limitations under the License.
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="../shared/tfjs-examples.css" />
+  <!-- sohrab modification start: using tfjs cdn  -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.4.0/dist/tf.min.js">
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-vis/dist/tfjs-vis.umd.min.js">
+  </script>
+  <!-- sohrab modification end: using tfjs cdn -->
 </head>
 
 <style>
@@ -48,6 +55,7 @@ limitations under the License.
 
 <body>
   <div class='tfjs-example-container centered-container'>
+	[sohrab] Run Addition Xmpl <input type="checkbox" id="useAddnXmplChkbx">
     <section class='title-area'>
       <h1>TensorFlow.js: Addition RNN</h1>
       <p class='subtitle'>Train a model to learn addition by example</p>
@@ -82,11 +90,11 @@ limitations under the License.
       <div class="controls with-rows">
         <div class="settings">
           <div class="setting">
-            <span class="setting-label">Digits:</span>
+            <span class="setting-label">Digits: ([sohrab] number of digits (1-5), application-specific param)</span>
             <input id="digits" value="2"></input>
           </div>
           <div class="setting">
-            <span class="setting-label">Training Size:</span>
+            <span class="setting-label">Training Size: ([sohrab] number of addition training examples to generate)</span>
             <input id="trainingSize" value="5000"></input>
           </div>
           <div class="setting">

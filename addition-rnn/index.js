@@ -22,8 +22,12 @@
  *   https://github.com/keras-team/keras/blob/master/examples/addition_rnn.py
  */
 
-import * as tf from '@tensorflow/tfjs';
-import * as tfvis from '@tensorflow/tfjs-vis';
+//sohrab modification start
+//import * as tf from '@tensorflow/tfjs';
+//import * as tfvis from '@tensorflow/tfjs-vis';
+const tf = globalThis.tf
+const tfvis = globalThis.tfvis
+//sohrab modification end
 
 class CharacterTable {
   /**
@@ -159,19 +163,30 @@ function generateData(digits, numExamples, invert) {
   return output;
 }
 
-function convertDataToTensors(data, charTable, digits) {
-  const maxLen = digits + 1 + digits;
+function convertDataToTensors(data, charTable, 
+	/*digits,*///[sohrab] removing application-specific parameter 
+	maxInpLen, maxOupLen) {//[sohrab] passing in params for softcoding
+  const maxLen = maxInpLen//digits + 1 + digits; //;[sohrab] softcoding
   const questions = data.map(datum => datum[0]);
   const answers = data.map(datum => datum[1]);
   return [
     charTable.encodeBatch(questions, maxLen),
-    charTable.encodeBatch(answers, digits + 1),
+	
+	//[sohrab] softcoding
+    charTable.encodeBatch(answers, /*digits + 1*/maxOupLen),
   ];
 }
 
 function createAndCompileModel(
-    layers, hiddenSize, rnnType, digits, vocabularySize) {
-  const maxLen = digits + 1 + digits;
+  layers, hiddenSize, rnnType,
+  //digits, //[sohrab] not passing application-specific arg any longer
+  vocabularySize
+  //sohrab modification start: add params for softcoding
+  , maxInpLen, maxOupLen
+  //sohrab modification end: add params for softcoding
+) {
+  const maxLen = maxInpLen/*digits + 1 + digits*/;//[sohrab] use softcoding
+	
 
   const model = tf.sequential();
   switch (rnnType) {
@@ -199,7 +214,9 @@ function createAndCompileModel(
     default:
       throw new Error(`Unsupported RNN type: '${rnnType}'`);
   }
-  model.add(tf.layers.repeatVector({n: digits + 1}));
+  model.add(tf.layers.repeatVector({
+    n: /*digits + 1*//* [sohrab] use softcoding */ maxOupLen
+  }));
   switch (rnnType) {
     case 'SimpleRNN':
       model.add(tf.layers.simpleRNN({
@@ -238,20 +255,75 @@ function createAndCompileModel(
 
 class AdditionRNNDemo {
   constructor(digits, trainingSize, rnnType, layers, hiddenSize) {
+	//[sohrab] new code start
+	let maxInpLen, maxOupLen
+
+	if(!runRnnAdditionXmpl) {
+		trngXmpls = [
+			['aa', 'a'],
+			['bb', 'b'],
+			['cc', 'c'],
+			['dd', 'd'],
+			['ff', 'f'],
+			['gg', 'g'],
+			['hh', 'h'],
+			['ii', 'i'],
+			['jj', 'j'],
+			['kk', 'k'],
+			['ll', 'l'],
+			['mm', 'm'],
+			['nn', 'n'],
+			['oo', 'o'],
+			['pp', 'p'],
+			['qq', 'q'],
+			['rr', 'r']
+		]
+		maxInpLen = maxInpLenFromTrngXmpls()
+		maxOupLen = maxOupLenFromTrngXmpls()
+		padTrngXmpls(maxInpLen, maxOupLen)
+		trainingSize = trngXmpls.length
+	}
+	//[sohrab] new code end
+	
     // Prepare training data.
-    const chars = '0123456789+ ';
+    const chars = (runRnnAdditionXmpl ? '0123456789+ ' :
+			strOfAllChrsFromTrngXmpls())
     this.charTable = new CharacterTable(chars);
     console.log('Generating training data');
-    const data = generateData(digits, trainingSize, false);
+    if (runRnnAdditionXmpl) {//[sohrab]: run below LOC conditionally
+        trngXmpls = generateData(digits, trainingSize, false);
+		
+		//[sohrab]:trainingSize just means the num of examples to generate
+		assert(trngXmpls.length == trainingSize)
+		
+		//[sohrab] rhs values were previously hardcoded elsewhere, you can 
+		//search this file for 'digits + 1 + digits' etc. 
+		maxInpLen = digits + 1 + digits 
+		maxOupLen = digits + 1
+		
+    }//[sohrab]: close the 'if' condition inserted above
+
     const split = Math.floor(trainingSize * 0.9);
-    this.trainData = data.slice(0, split);
+	
+	//[sohrab]: Use a local var 'data' to be compatible with the original code
+	let data = trngXmpls
+    
+	this.trainData = data.slice(0, split);
     this.testData = data.slice(split);
     [this.trainXs, this.trainYs] =
-        convertDataToTensors(this.trainData, this.charTable, digits);
+        convertDataToTensors(this.trainData, this.charTable, 
+			//digits //[sohrab] not passing application-specific param
+			maxInpLen, maxOupLen); //[sohrab] passing params for softcoding
     [this.testXs, this.testYs] =
-        convertDataToTensors(this.testData, this.charTable, digits);
+        convertDataToTensors(this.testData, this.charTable, 
+			//digits //[sohrab] not passing application-specific param
+			maxInpLen, maxOupLen); //[sohrab] passing params for softcoding
     this.model = createAndCompileModel(
-        layers, hiddenSize, rnnType, digits, chars.length);
+      layers, hiddenSize, rnnType,
+      //digits, //[sohrab] - not passing application-specific param
+      chars.length
+	, maxInpLen, maxOupLen//[sohrab] - passing in softcoding params
+    );
   }
 
   async train(iterations, batchSize, numTestExamples) {
@@ -372,8 +444,107 @@ async function runAdditionRNNDemo() {
 
     const demo =
         new AdditionRNNDemo(digits, trainingSize, rnnType, layers, hiddenSize);
+    //sohrab additional user input validations begin
+		if (demo.testData.length < numTestExamples) {
+			status.textContent =
+				`With the current training examples provided you can have ` + `at most ${demo.testData.length} test examples.`
+			return
+		}
+		if (demo.trainData.length < batchSize) {
+			status.textContent =
+				`With the current training examples provided you can have ` + `at most batchSize=${demo.trainData.length}.`
+			return
+		}
+    //sohrab additional user input validations end	
     await demo.train(trainIterations, batchSize, numTestExamples);
   });
 }
+
+//sohrab new code addition start
+let trngXmpls
+
+
+function padTrngXmpls(maxInpLen, maxOupLen) {
+	for (let trngXmpl of trngXmpls) {
+		assert(trngXmpl.length == 2)
+		let s = trngXmpl[0]
+		trngXmpl[0] = s + ' '.repeat(maxInpLen - s.length)
+		s = trngXmpl[1]
+		trngXmpl[1] = s + ' '.repeat(maxOupLen - s.length)
+	}
+}
+
+/**
+ * @param {number} ixInXmpl - 0: input part of example, 1: o/p part of example
+ */
+function maxInpOrOupLenFromTrngXmpls(ixInXmpl) {
+  let rv = 0
+  for (const trngXmpl of trngXmpls) {
+    assert(trngXmpl.length == 2)
+    let xmplPrt = trngXmpl[ixInXmpl]
+    assert(typeof xmplPrt == 'string')
+    if (xmplPrt.length > rv) { rv = xmplPrt.length }
+  }
+  return rv
+}
+
+function maxInpLenFromTrngXmpls() { return maxInpOrOupLenFromTrngXmpls(0) }
+function maxOupLenFromTrngXmpls() { return maxInpOrOupLenFromTrngXmpls(1) }
+
+function assert(b) { if (!b) { alert('ASSERT FAILED'); debugger; } }
+
+function strOfAllChrsFromTrngXmpls() {
+	let s = new Set()
+	for (const trngXmpl of trngXmpls) {
+		for (const trngXmplPrt of trngXmpl) {
+			for (const c of trngXmplPrt) {
+				s.add(c)
+			}
+		}
+	}
+	let rv = ''
+	for (const c of s) { rv += c }
+	return rv
+}
+
+let runRnnAdditionXmpl
+
+function initChkBx() {
+	let e = el('useAddnXmplChkbx')
+	addOnChangeLsnrFn(e, (val)=>{runRnnAdditionXmpl = val})
+}
+
+
+//html & js sugar begin
+function addOnChangeLsnrFn(e, onChangeLsnrFn) {
+	onChangeLsnrFn(elVal(e))
+	if (isChkbx(e) || isDrpdn(e)) { onChange(e, onChangeLsnrFn); return }
+	onInp(e, onChangeLsnrFn)
+}
+
+function onChange(idOrEl, lsnrFn) {
+	addEventListener(idOrEl, 'change', () => lsnrFn(elVal(idOrEl)))
+}
+
+function elVal(idOrEl) {
+	let e = el(idOrEl)
+	if (e.tagName == 'SELECT') { return e.options[e.selectedIndex].text }
+	return e[valuePropNm(e)]
+}
+
+function valuePropNm(e) {return (isChkbx(e) ? 'checked' : 'value')}
+function isChkbx(e) {	return (e.type == 'checkbox')}
+const doc = document
+function el(idOrEl) {
+	return (isStr(idOrEl) ? doc.getElementById(idOrEl) : idOrEl)
+}
+function isStr(o) { return (typeof o == 'string') }
+function addEventListener(idOrEl, evtNm, lsnrFn) {
+	el(idOrEl).addEventListener(evtNm, lsnrFn)
+}
+//html & js sugar end
+
+initChkBx()
+//sohrab new code addition end
 
 runAdditionRNNDemo();
