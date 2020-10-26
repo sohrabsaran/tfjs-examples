@@ -36,7 +36,7 @@ to another project.
   <tr>
     <td><a href="./addition-rnn">addition-rnn</a></td>
     <td><a href="https://storage.googleapis.com/tfjs-examples/addition-rnn/dist/index.html">🔗</a>
-     <br>[sohrab]: Github pages link: <a href=" https://sohrabsaran.github.io/tfjs-examples/addition-rnn">🔗</a>
+     <br>[sohrab]: Github pages link: <a href="https://sohrabsaran.github.io/tfjs-examples/addition-rnn">🔗</a>
    </td>
     <td>Text</td>
     <td>Sequence-to-sequence</td>
